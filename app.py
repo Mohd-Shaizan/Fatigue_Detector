@@ -12,7 +12,10 @@ st.markdown("Real-time Face + Body Monitoring")
 
 # ---- WebRTC Configuration (VERY IMPORTANT FOR CLOUD) ----
 RTC_CONFIGURATION = RTCConfiguration(
-    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+    {"iceServers": [
+        {"urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]},
+        # Add more if deploying to production
+    ]}
 )
 
 # ---- MediaPipe Setup ----
