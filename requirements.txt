@@ -1,5 +1,6 @@
+streamlit==1.32.0
+streamlit-webrtc==0.47.7
 mediapipe==0.10.9
 opencv-python-headless
-streamlit-webrtc==0.47.7
 av
 numpy
