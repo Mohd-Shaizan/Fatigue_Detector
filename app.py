@@ -100,9 +100,23 @@ class FatigueProcessor(VideoProcessorBase):
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 
+class VideoProcessor(VideoProcessorBase):
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+
+        # your mediapipe processing here
+
+        return av.VideoFrame.from_ndarray(img, format="bgr24")
+
+
 webrtc_streamer(
-    key="fatigue-detection",
-    video_processor_factory=FatigueProcessor,
-    rtc_configuration=RTC_CONFIGURATION,
-    media_stream_constraints={"video": True, "audio": False},
+    key="fatigue-detector",
+    video_processor_factory=VideoProcessor,   # NEW API
+    media_stream_constraints={
+        "video": True,
+        "audio": False,
+    },
+    rtc_configuration={
+        "iceServers": []   # 🔥 IMPORTANT: disable STUN
+    },
 )
