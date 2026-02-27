@@ -146,8 +146,14 @@ with col2:
         key="fatigue-monitor",
         video_processor_factory=FatigueProcessor,
         rtc_configuration=rtc_configuration,
-        media_stream_constraints={"video": True, "audio": False},
-        async_processing=True,
+  media_stream_constraints={
+    "video": {
+        "width": {"ideal": 940},
+        "height": {"ideal": 580},
+        "frameRate": {"ideal": 60}
+    },
+    "audio": False,
+},        async_processing=True,
     )
 
 webrtc_streamer(
