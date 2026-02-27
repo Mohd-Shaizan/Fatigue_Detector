@@ -142,5 +142,12 @@ webrtc_streamer(
     key="fatigue-monitor",
     video_processor_factory=FatigueProcessor,
     rtc_configuration=rtc_configuration,
-    media_stream_constraints={"video": True, "audio": False},
+    media_stream_constraints={
+    "video": {
+        "width": {"ideal": 640},
+        "height": {"ideal": 480},
+        "frameRate": {"ideal": 30}
+    },
+    "audio": False,
+},
 )
