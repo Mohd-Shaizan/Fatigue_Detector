@@ -21,14 +21,24 @@ rtc_configuration = RTCConfiguration(
 # ==============================
 # STREAMLIT UI
 # ==============================
-st.set_page_config(page_title="GuardianEye Fatigue Monitor", layout="wide")
-st.title("Workplace Fatigue Monitor")
 
+st.set_page_config(page_title="GuardianEye Fatigue Monitor", layout="wide")
+
+# Centering and increasing the font size of the Title
 st.markdown("""
-This system monitors posture and movement frequency to detect signs of exhaustion.
-- **Head Drop:** Detected via facial landmark displacement.
-- **Micro-Movement:** Analyzes if the user has become unnaturally still (hypomotility).
-""")
+    <h1 style='text-align: center; font-size: 60px;'>🚛 Workplace Fatigue Monitor</h1>
+    """, unsafe_allow_html=True)
+
+# Centering and increasing the font size of the Description
+st.markdown("""
+    <div style='text-align: center; font-size: 24px;'>
+        <p>This system monitors posture and movement frequency to detect signs of exhaustion.</p>
+        <ul style='list-style-position: inside; display: inline-block; text-align: left;'>
+            <li><strong>Head Drop:</strong> Detected via facial landmark displacement.</li>
+            <li><strong>Micro-Movement:</strong> Analyzes if the user has become unnaturally still (hypomotility).</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 st.markdown("""
     <style>
     /* This targets the iframe containing the webcam */
