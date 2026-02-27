@@ -29,6 +29,20 @@ This system monitors posture and movement frequency to detect signs of exhaustio
 - **Head Drop:** Detected via facial landmark displacement.
 - **Micro-Movement:** Analyzes if the user has become unnaturally still (hypomotility).
 """)
+st.markdown("""
+    <style>
+    /* This targets the iframe containing the webcam */
+    .element-container iframe {
+        width: 600px !important;
+        height: 450px !important;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        border-radius: 10px;
+        border: 2px solid #00ffc8; /* Optional neon border */
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # ==============================
 # VIDEO PROCESSOR
