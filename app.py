@@ -49,7 +49,6 @@ st.markdown("""
         margin-left: auto;
         margin-right: auto;
         border-radius: 10px;
-        border: 2px solid #00ffc8; /* Optional neon border */
     }
     </style>
     """, unsafe_allow_html=True)
