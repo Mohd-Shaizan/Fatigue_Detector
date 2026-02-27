@@ -4,24 +4,31 @@ import av
 import cv2
 import mediapipe as mp
 import numpy as np
+import os
+
+# Disable GPU acceleration for MediaPipe to avoid EGL errors on headless servers
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
 
 st.set_page_config(page_title="Workplace Fatigue Detector", layout="wide")
 
-# ---- GLOBALS (Initialize outside the class to avoid repeated downloads) ----
-# This ensures MediaPipe loads once during app startup
+st.title("🧠 Workplace Fatigue Detector")
+st.markdown("Real-time Face + Body Monitoring (CPU Optimized)")
+
+# --- GLOBAL INITIALIZATION (Outside the class to fix permission/threading issues) ---
 mp_face_mesh = mp.solutions.face_mesh
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
-# We initialize these globally so they are ready before the WebRTC thread starts
-face_mesh_instance = mp_face_mesh.FaceMesh(
+# Use model_complexity=0 (Lite) for Pose and static_image_mode=False for better performance
+# We initialize them once globally
+face_mesh = mp_face_mesh.FaceMesh(
+    max_num_faces=1,
     refine_landmarks=True,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
-# Model complexity 1 is usually pre-packaged and avoids the "lite" download trigger
-pose_instance = mp_pose.Pose(
-    model_complexity=1, 
+pose = mp_pose.Pose(
+    model_complexity=0, 
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
 )
@@ -34,28 +41,30 @@ class FatigueProcessor(VideoProcessorBase):
 
     def recv(self, frame: av.VideoFrame):
         img = frame.to_ndarray(format="bgr24")
-        img = cv2.flip(img, 1)
-        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.flip(img, 1) # Mirror view
         img_h, img_w, _ = img.shape
+        
+        # Performance: MediaPipe works better with RGB
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        # Use the global instances instead of local ones
-        face_results = face_mesh_instance.process(rgb)
-        pose_results = pose_instance.process(rgb)
+        # Process landmarks using global instances
+        face_results = face_mesh.process(rgb)
+        pose_results = pose_results = pose.process(rgb)
 
-        # ---- FACE DETECTION ----
+        # 1. Face Logic
         if face_results.multi_face_landmarks:
             for landmarks in face_results.multi_face_landmarks:
                 mp_drawing.draw_landmarks(img, landmarks, mp_face_mesh.FACEMESH_CONTOURS)
                 
+                # Head tilt detection
                 nose = landmarks.landmark[1]
                 chin = landmarks.landmark[152]
-                drop = (chin.y - nose.y) * img_h
-                if drop > 80:
+                if (chin.y - nose.y) * img_h > 80:
                     self.head_counter += 1
                 else:
                     self.head_counter = 0
 
-        # ---- POSE DETECTION ----
+        # 2. Pose Logic
         if pose_results.pose_landmarks:
             mp_drawing.draw_landmarks(img, pose_results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             
@@ -67,33 +76,36 @@ class FatigueProcessor(VideoProcessorBase):
             if len(self.movement_history) > 20:
                 self.movement_history.pop(0)
 
-        # ---- FATIGUE LOGIC ----
+        # 3. Fatigue Scoring
         if len(self.movement_history) > 10:
             variation = np.std(self.movement_history)
-            if variation < 0.005:
-                self.fatigue_score += 1
+            if variation < 0.005: # Slumping/Stillness
+                self.fatigue_score += 0.5
             else:
-                self.fatigue_score = max(0, self.fatigue_score - 1)
+                self.fatigue_score = max(0, self.fatigue_score - 0.2)
 
         if self.head_counter > 15:
             self.fatigue_score += 2
 
-        # Status Overlay
-        status = "FATIGUE DETECTED" if self.fatigue_score > 15 else "NORMAL"
-        color = (0, 0, 255) if self.fatigue_score > 15 else (0, 255, 0)
-        cv2.putText(img, status, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # UI Visuals
+        alert = self.fatigue_score > 15
+        label = "⚠️ FATIGUE ALERT" if alert else "NORMAL"
+        color = (0, 0, 255) if alert else (0, 255, 0)
+        
+        cv2.putText(img, label, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.rectangle(img, (0, 0), (img_w, img_h), color, 10 if alert else 0)
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# WebRTC Config
+# STUN servers are mandatory for the video to start in Cloud
 RTC_CONFIGURATION = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 )
 
 webrtc_streamer(
-    key="fatigue-detector",
+    key="fatigue-main",
     video_processor_factory=FatigueProcessor,
     rtc_configuration=RTC_CONFIGURATION,
     media_stream_constraints={"video": True, "audio": False},
-    async_processing=True,
+    async_processing=True, # Critical for keeping the UI responsive
 )
