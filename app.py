@@ -144,7 +144,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     webrtc_streamer(
         key="neuroscan-full",
-        video_processor_factory=TremorProcessor,
+        video_processor_factory=FatigueProcessor,
         rtc_configuration=rtc_configuration,
         media_stream_constraints={"video": True, "audio": False},
         async_processing=True,
