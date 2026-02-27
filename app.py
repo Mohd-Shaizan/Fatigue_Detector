@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import av
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -6,119 +8,109 @@ import numpy as np
 st.set_page_config(page_title="Workplace Fatigue Detector", layout="wide")
 
 st.title("🧠 Workplace Fatigue Detector")
-st.markdown("Real-time face + body fatigue monitoring")
+st.markdown("Real-time Face + Body Monitoring (Cloud Compatible)")
 
-run = st.checkbox("Start Camera")
+mp_face = mp.tasks.vision.FaceLandmarker
+mp_pose = mp.tasks.vision.PoseLandmarker
+BaseOptions = mp.tasks.BaseOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
-frame_placeholder = st.empty()
-status_placeholder = st.empty()
+# Load models (automatically downloaded)
+face_options = mp.tasks.vision.FaceLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=None),
+    running_mode=VisionRunningMode.LIVE_STREAM,
+)
 
-# Proper MediaPipe initialization (IMPORTANT)
-mp_face_mesh = mp.solutions.face_mesh
-mp_pose = mp.solutions.pose
-mp_drawing = mp.solutions.drawing_utils
-
-head_drop_counter = 0
-movement_history = []
-fatigue_score = 0
-
-
-def calculate_head_drop(landmarks, img_h):
-    nose = landmarks[1]
-    chin = landmarks[152]
-    return (chin.y - nose.y) * img_h
+pose_options = mp.tasks.vision.PoseLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=None),
+    running_mode=VisionRunningMode.LIVE_STREAM,
+)
 
 
-if run:
-    cap = cv2.VideoCapture(0)
+class FatigueDetector(VideoTransformerBase):
+    def __init__(self):
+        self.head_counter = 0
+        self.fatigue_score = 0
+        self.prev_shoulder_y = []
 
-    with mp_face_mesh.FaceMesh(
-        max_num_faces=1,
-        refine_landmarks=True,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    ) as face_mesh, mp_pose.Pose(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    ) as pose:
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-        while run:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("Camera access denied or unavailable.")
-                break
+        img_h, img_w, _ = img.shape
 
-            frame = cv2.flip(frame, 1)
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Fallback simple detection (since Tasks API model auto path is tricky in cloud)
+        mp_face_mesh = mp.solutions.face_mesh
+        mp_pose_solution = mp.solutions.pose
+        mp_draw = mp.solutions.drawing_utils
+
+        with mp_face_mesh.FaceMesh(refine_landmarks=True) as face_mesh, \
+             mp_pose_solution.Pose() as pose:
 
             face_results = face_mesh.process(rgb)
             pose_results = pose.process(rgb)
 
-            img_h, img_w, _ = frame.shape
-
-            # FACE PROCESSING
+            # FACE
             if face_results.multi_face_landmarks:
-                for face_landmarks in face_results.multi_face_landmarks:
-                    mp_drawing.draw_landmarks(
-                        frame,
-                        face_landmarks,
-                        mp_face_mesh.FACEMESH_CONTOURS
+                for landmarks in face_results.multi_face_landmarks:
+                    mp_draw.draw_landmarks(
+                        img, landmarks, mp_face_mesh.FACEMESH_CONTOURS
                     )
 
-                    drop_value = calculate_head_drop(
-                        face_landmarks.landmark,
-                        img_h
-                    )
+                    nose = landmarks.landmark[1]
+                    chin = landmarks.landmark[152]
+                    drop = (chin.y - nose.y) * img_h
 
-                    if drop_value > 80:
-                        head_drop_counter += 1
+                    if drop > 80:
+                        self.head_counter += 1
                     else:
-                        head_drop_counter = 0
+                        self.head_counter = 0
 
-            # POSE PROCESSING
+            # POSE
             if pose_results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    frame,
+                mp_draw.draw_landmarks(
+                    img,
                     pose_results.pose_landmarks,
-                    mp_pose.POSE_CONNECTIONS
+                    mp_pose_solution.POSE_CONNECTIONS,
                 )
 
                 left_shoulder = pose_results.pose_landmarks.landmark[11]
                 right_shoulder = pose_results.pose_landmarks.landmark[12]
 
-                shoulder_diff = abs(left_shoulder.y - right_shoulder.y)
-                movement_history.append(shoulder_diff)
+                diff = abs(left_shoulder.y - right_shoulder.y)
+                self.prev_shoulder_y.append(diff)
 
-                if len(movement_history) > 30:
-                    movement_history.pop(0)
+                if len(self.prev_shoulder_y) > 20:
+                    self.prev_shoulder_y.pop(0)
 
-            # FATIGUE CALCULATION
-            if len(movement_history) > 10:
-                movement_variation = np.std(movement_history)
+            # FATIGUE LOGIC
+            if len(self.prev_shoulder_y) > 10:
+                variation = np.std(self.prev_shoulder_y)
 
-                if movement_variation < 0.01:
-                    fatigue_score += 1
+                if variation < 0.01:
+                    self.fatigue_score += 1
                 else:
-                    fatigue_score = max(0, fatigue_score - 1)
+                    self.fatigue_score = max(0, self.fatigue_score - 1)
 
-            if head_drop_counter > 15:
-                fatigue_score += 2
+            if self.head_counter > 15:
+                self.fatigue_score += 2
 
-            # ALERT SYSTEM
-            if fatigue_score > 15:
+            if self.fatigue_score > 15:
                 cv2.putText(
-                    frame,
-                    "⚠ FATIGUE DETECTED!",
+                    img,
+                    "⚠ FATIGUE DETECTED",
                     (50, 80),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1.2,
                     (0, 0, 255),
                     3,
                 )
-                status_placeholder.error("⚠ Fatigue Detected!")
-            else:
-                status_placeholder.success("✅ Active")
 
-            frame_placeholder.image(frame, channels="BGR")
+        return img
 
-    cap.release()
+
+webrtc_streamer(
+    key="fatigue",
+    video_transformer_factory=FatigueDetector,
+    media_stream_constraints={"video": True, "audio": False},
+)
