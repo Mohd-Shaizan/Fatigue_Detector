@@ -22,7 +22,7 @@ rtc_configuration = RTCConfiguration(
 # STREAMLIT UI
 # ==============================
 st.set_page_config(page_title="GuardianEye Fatigue Monitor", layout="wide")
-st.title("🚛 GuardianEye - Workplace Fatigue Monitor")
+st.title("Workplace Fatigue Monitor")
 
 st.markdown("""
 This system monitors posture and movement frequency to detect signs of exhaustion.
