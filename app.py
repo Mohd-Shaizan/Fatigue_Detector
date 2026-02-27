@@ -26,7 +26,7 @@ st.set_page_config(page_title="GuardianEye Fatigue Monitor", layout="wide")
 
 # Centering and increasing the font size of the Title
 st.markdown("""
-    <h1 style='text-align: center; font-size: 60px;'> GuardianEye:Fatigue Monitor</h1>
+    <h1 style='text-align: center; font-size: 60px;'> GuardianEye: AI Fatigue Monitor System</h1>
     """, unsafe_allow_html=True)
 
 # Centering and increasing the font size of the Description
