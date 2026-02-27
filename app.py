@@ -156,7 +156,7 @@ webrtc_streamer(
     rtc_configuration=rtc_configuration,
     media_stream_constraints={
     "video": {
-        "width": {"ideal": 640},
+        "width": {"ideal": 940},
         "height": {"ideal": 480},
         "frameRate": {"ideal": 30}
     },
