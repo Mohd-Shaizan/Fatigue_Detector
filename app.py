@@ -138,6 +138,18 @@ class FatigueProcessor(VideoProcessorBase):
 # ==============================
 # WEBRTC STREAM
 # ==============================
+# Create three columns; the camera will live in the middle one
+col1, col2, col3 = st.columns([1, 2, 1]) 
+
+with col2:
+    webrtc_streamer(
+        key="neuroscan-full",
+        video_processor_factory=TremorProcessor,
+        rtc_configuration=rtc_configuration,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
+
 webrtc_streamer(
     key="fatigue-monitor",
     video_processor_factory=FatigueProcessor,
