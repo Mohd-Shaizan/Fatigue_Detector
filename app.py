@@ -151,7 +151,7 @@ with col2:
     )
 
 webrtc_streamer(
-    key="fatigue-monitor",
+    key="fatige-monitor",
     video_processor_factory=FatigueProcessor,
     rtc_configuration=rtc_configuration,
     media_stream_constraints={
