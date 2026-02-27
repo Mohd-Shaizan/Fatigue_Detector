@@ -158,7 +158,7 @@ webrtc_streamer(
     "video": {
         "width": {"ideal": 940},
         "height": {"ideal": 480},
-        "frameRate": {"ideal": 30}
+        "frameRate": {"ideal": 60}
     },
     "audio": False,
 },
