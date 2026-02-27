@@ -143,7 +143,7 @@ col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
     webrtc_streamer(
-        key="neuroscan-full",
+        key="fatigue-monitor",
         video_processor_factory=FatigueProcessor,
         rtc_configuration=rtc_configuration,
         media_stream_constraints={"video": True, "audio": False},
@@ -157,7 +157,7 @@ webrtc_streamer(
     media_stream_constraints={
     "video": {
         "width": {"ideal": 940},
-        "height": {"ideal": 480},
+        "height": {"ideal": 580},
         "frameRate": {"ideal": 60}
     },
     "audio": False,
